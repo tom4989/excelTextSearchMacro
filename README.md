@@ -1,0 +1,2 @@
+# excelTextSearchMacro
+Excelを検索するExcelマクロ
