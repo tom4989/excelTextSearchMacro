@@ -126,7 +126,7 @@ Function シート毎処理(fileName As Variant, targetSheet As Worksheet, ByRef resul
         
         Do
             ' 結果を格納する
-            Call reDimResult(RESULT_COL_LENGTH, results)                ' 結果保持の配列作成
+            Call reDimResult(RESULT_COL_LENGTH, results)                   ' 結果保持の配列作成
             lngResultCount = UBound(results, 2)
             
             results(0, lngResultCount) = txt検索ワード                     ' 検索文言
@@ -154,11 +154,11 @@ GotoCellSearchEnd:
             For i = LBound(ShapesInfoList) To UBound(ShapesInfoList)
                 textValue = ShapesInfoList(i, 2)
                 If Not IsEmpty(textValue) And InStr(textValue, txt検索ワード) Then
-  
-                    lngResultCount = UBound(results, 2)
                 
                     ' 結果を格納する
                     Call reDimResult(RESULT_COL_LENGTH, results)                   ' 結果保持の配列作成
+                    lngResultCount = UBound(results, 2)
+                    
                     results(0, lngResultCount) = txt検索ワード                     ' 検索文言
                     results(1, lngResultCount) = FSO.GetParentFolderName(fileName) ' フォルダ名
                     results(2, lngResultCount) = FSO.GetFileName(fileName)         ' ファイル名
