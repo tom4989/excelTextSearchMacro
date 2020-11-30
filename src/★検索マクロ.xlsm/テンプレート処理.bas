@@ -5,7 +5,12 @@ Option Explicit
 ' 定数
 ' ---------------------------------------------------------------------------------------------------------------------
 
+' 対象の拡張子
+Private Const FILE_EXTENSION = "xls,xlsx,xlsm"
+
 Private Const KEY_パス = "パス"
+Private Const KEY_対象ブックシート = "対象ブックシート"
+Private Const KEY_対象外ブックシート = "対象外ブックシート"
 
 ' ---------------------------------------------------------------------------------------------------------------------
 ' 変数
@@ -21,39 +26,20 @@ Public obj設定値シート As cls設定値シート
 Sub マクロ開始()
 
     Call init開始時刻
-    
-    Dim wsMainSheet As Worksheet
-    Dim fileCheck As Long
-    
+
     Set obj設定値シート = New cls設定値シート
     obj設定値シート.ロード (ActiveSheet.Name)
-    
-    ' タイトル名に対するリストの情報（Range情報）
-    ' Dim currentDirPathRangeList As Range, currentDirPathRange As Range
-    ' Dim subDirCheckBoxRangeList As Range, subDirCheckBoxRange As Range
-    
-    ' 処理対象のファイル名一覧（フルパス＆ファイル名）
-    Dim fileNames() As String
     
     ' -----------------------------------------------------------------------------------------------------------------
     ' 初期化処理
     ' -----------------------------------------------------------------------------------------------------------------
     
-    ' 処理対象の拡張子を設定する。
-    Dim fileExtention As Variant
-    fileExtention = Split(FILE_EXTENSION, ",")
-    
     ' 固有処理（マクロ呼び出し元）側のシート情報を取得する。
-    ' Set wsMainSheet = MainSheet
-    Set wsMainSheet = ActiveSheet
-    
-    ' 固有処理（マクロ呼び出し元）側のパス情報を取得する。
-    ' Set currentDirPathRangeList = タイトル名指定でリスト値のRange情報を取得(TITLE_NAME_BY_TARGET_DIR, wsMainSheet)
-    ' Set subDirCheckBoxRangeList = タイトル名指定でリスト値のRange情報を取得(TITLE_NAME_BY_DO_SUB_DIR, wsMainSheet)
-    
-    ' ★ConcreateProcess側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-    Call 全体前処理(wsMainSheet)
+    Dim wsマクロ呼び出し元シート As Worksheet
+    Set wsマクロ呼び出し元シート = ActiveSheet
 
+    ' ★ConcreateProcess側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
+    Call 全体前処理(wsマクロ呼び出し元シート)
 
     ' -----------------------------------------------------------------------------------------------------------------
     ' パスの存在チェック
@@ -61,24 +47,18 @@ Sub マクロ開始()
 
     Dim txtパス As Variant
 
-    With wsMainSheet
+    With wsマクロ呼び出し元シート
 
-        Dim i As Long
-        i = 0
         ' 対象ディレクトリ分ループ
-        ' If Not (obj設定値シート.設定値リスト.Item(KEY_パス) Is Nothing) Then
-            For Each txtパス In obj設定値シート.設定値リスト.Item(KEY_パス)
+        For Each txtパス In obj設定値シート.設定値リスト.Item(KEY_パス)
             
-                ' ディレクトリまたは、ファイルの存在チェック
-                fileCheck = isDirectoryExist(CStr(txtパス))
+            ' ディレクトリまたは、ファイルの存在チェック
+            If isDirectoryExist(CStr(txtパス)) < 0 Then
                 
-                If 0 > fileCheck Then
-                    MsgBox "以下のパスは存在しません。" + Chr(10) + "「" + txtパス + "」"
-                    End
-                End If
-                i = i + 1
-            Next
-        ' End If
+                MsgBox "以下のパスは存在しません。" + Chr(10) + "「" + txtパス + "」"
+                End
+            End If
+        Next
     End With
 
     ' -----------------------------------------------------------------------------------------------------------------
@@ -87,53 +67,39 @@ Sub マクロ開始()
 
     Call setステータスバー("対象ファイル集計中...")
     
-    With ActiveSheet
+    ' 処理対象の拡張子を設定する。
+    Dim varファイル拡張子 As Variant
+    varファイル拡張子 = Split(FILE_EXTENSION, ",")
     
-        i = 1
-        '対象ディレクトリ分ループ
-        ' If Not (obj設定値シート.設定値リスト.Item(KEY_パス) Is Nothing) Then
-            For Each txtパス In obj設定値シート.設定値リスト.Item(KEY_パス)
-            
-                '指定の値がファイルの場合、その値をリストに追加し、ディレクトリの場合は、ファイル名の一覧を動的に取得して追加する。
-                fileCheck = isDirectoryExist(CStr(txtパス))
-                If 2 = fileCheck Then
-                    ' 指定の値がファイルだった場合、その値をリストに追加
-                    ' フルパス＆ファイル名を追加格納。
-                    Call 一次配列に値を追加(fileNames, CStr(txtパス))
-                Else
-                    
-                    ' ＜オートシェイプ情報の取得＞
-                    Dim shapesCount As Long
-                    Dim checkBoxChecked As Variant
-                    Dim topLeftCellRow As Variant, topLeftCellColumn As Variant
-            
-                    ' オートシェイプ（チェックボックス）情報を取得。
-                    Dim ShapesInfoList As Variant
-                    ShapesInfoList = getShapesProperty(wsMainSheet, msoFormControl, xlCheckBox)
-                    
-                    ' 対象セル行のチェックボックスのチェック状態を取得（boolean形式で）
-                    checkBoxChecked = True
-                    
-                    ' 現在のディレクトリ配下のファイル名を取得
-                    Call doRepeat(txtパス, fileExtention, fileNames, checkBoxChecked)
-                
-                End If
-                
-                i = i + 1
-            Next
-            
-        ' End If
-        
-    End With
+    ' 処理対象のファイル名一覧（フルパス＆ファイル名）
+    Dim txtパス一覧() As String
     
+    '対象ディレクトリ分ループ
+    For Each txtパス In obj設定値シート.設定値リスト.Item(KEY_パス)
+            
+        '指定の値がファイルの場合、その値をリストに追加し、
+        ' ディレクトリの場合は、ファイル名の一覧を動的に取得して追加する。
+        If isDirectoryExist(CStr(txtパス)) = 2 Then
+            
+            ' 指定の値がファイルだった場合、その値をリストに追加
+            ' フルパス＆ファイル名を追加格納。
+            Call 一次配列に値を追加(txtパス一覧, CStr(txtパス))
+        Else
+                    
+            ' 現在のディレクトリ配下のファイル名を取得
+            Call doRepeat(txtパス, varファイル拡張子, txtパス一覧, True)
+                
+        End If
+    Next
+
     ' -----------------------------------------------------------------------------------------------------------------
     ' ファイル処理メソッドの呼び出し
     ' -----------------------------------------------------------------------------------------------------------------
     
-    Call ファイル処理(fileNames)
+    Call ファイル処理(txtパス一覧)
     
     ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-    Call 全体後処理(wsMainSheet)
+    Call 全体後処理(wsマクロ呼び出し元シート)
     
     MsgBox "処理が終了しました。（処理時間：" & get処理時刻() & ")"
 
@@ -145,79 +111,73 @@ End Sub
 ' * 戻り値：判定結果（1:配列/0:空の配列/-1:配列ではない）
 ' *********************************************************************************************************************
 '
-Function ファイル処理(fileNames() As String)
+Function ファイル処理(txtパス一覧() As String)
 
     ' ファイル名の一覧が空だった場合、当Functionを中断する。
-    If 1 > IsArrayEx(fileNames) Then
+    If IsArrayEx(txtパス一覧) < 1 Then
         MsgBox "処理対象ファイルが存在しません。"
         Exit Function
     End If
     
-    Dim FSO
-    Set FSO = CreateObject("Scripting.FileSystemObject")
-    
-    Dim fileName As Variant
-    Dim targetWB As Workbook
-    Dim targetSheet As Worksheet
-    
-    Dim index As Long, total As Long
-    
     Dim defaultSaveFormat As Long
     defaultSaveFormat = Application.defaultSaveFormat
-    
-    ' シート毎の処理呼び出し不要フラグ
-    Dim unDealTargetSheetFlag As Boolean
-    
-    ' 処理結果保持用
-    Dim results() As Variant
-    
-    index = 1
-    total = UBound(fileNames) + 1
     
     Application.DisplayAlerts = False ' ファイルを開く際の警告を無効
     Application.ScreenUpdating = False ' 画面表示更新を無効
     
-    For Each fileName In fileNames
+    ' 処理結果保持用
+    Dim results() As Variant
+    
+    Dim index As Long, total As Long
+        
+    index = 1
+    total = UBound(txtパス一覧) + 1
+    
+    Dim txtパス As Variant
+    
+    For Each txtパス In txtパス一覧
     
         ' -------------------------------------------------------------------------------------------------------------
         ' 対象ブックを開いて、全シート分の処理を行う。
         ' -------------------------------------------------------------------------------------------------------------
 
-        Call setステータスバー("(" & index & "/" & total & ")" & FSO.GetFileName(fileName))
+        Call setステータスバー("(" & index & "/" & total & ")" & ファイル名取得(CStr(txtパス)))
         index = index + 1
         
-        Set targetWB = Workbooks.Open(fileName, UpdateLinks:=0, IgnoreReadOnlyRecommended:=False)
+        Dim wb対象ブック As Workbook
+        Set wb対象ブック = Workbooks.Open(txtパス, UpdateLinks:=0, IgnoreReadOnlyRecommended:=False)
         
         ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-        unDealTargetSheetFlag = ブックOPEN後処理(fileName, targetWB, results)
+        If ブックOPEN後処理(txtパス, wb対象ブック, results) Then
         
-        If False = unDealTargetSheetFlag Then
-            Dim i As Integer
-            For i = 1 To targetWB.Worksheets.Count ' シートの数分ループする
+            ' ブックOPEN後処理の返り値がTrueの場合、シート毎の処理を続行する
+        
+            Dim i As Long
+            For i = 1 To wb対象ブック.Worksheets.Count
             
-                Set targetSheet = targetWB.Worksheets(i)
+                Dim ws対象シート As Worksheet
+                Set ws対象シート = wb対象ブック.Worksheets(i)
                 
                 ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-                Call シート毎処理(fileName, targetSheet, results)
+                Call シート毎処理(txtパス, ws対象シート, results)
                 
             Next i
             
         End If
         
-        Dim ファイルCLOSE方法区分値 As Long
-        
         ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-        ファイルCLOSE方法区分値 = ブックCLOSE前処理(fileName, targetWB, results)
+        Dim ファイルCLOSE方法区分値 As Long
+        ファイルCLOSE方法区分値 = ブックCLOSE前処理(txtパス, wb対象ブック, results)
         
         If ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.保存しないで閉じる Then
-            targetWB.Close
+            wb対象ブック.Close
         ElseIf ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.保存して閉じる Then
-            targetWB.Save
-            targetWB.Close
+            wb対象ブック.Save
+            wb対象ブック.Close
         ElseIf ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.保存しないで閉じない Then
             
         ElseIf ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.保存して閉じない Then
-            targetWB.Save
+            wb対象ブック.Save
         ElseIf ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.処理中断 Then
             End
         End If
@@ -227,6 +187,8 @@ Function ファイル処理(fileNames() As String)
     ' 実行結果の編集（結果のマージ、並び替え、フィルタリング当）
     Call 実行結果内容編集処理(results)
     
+    Dim wb結果ブック As Workbook
+    
     If Not Not results Then
     
         If UBound(results, 2) <> 0 Then
@@ -234,42 +196,45 @@ Function ファイル処理(fileNames() As String)
             ' ファイルの保存形式をexcel2007形式（.xlsx)に変更
             Application.defaultSaveFormat = xlOpenXMLWorkbook
             
-            Set targetWB = Workbooks.Add
+            Set wb結果ブック = Workbooks.Add
             
             ' 当ブックにシート「雛形」が用意されている場合、指定ブックの先頭にコピーした後、
             ' シート名を「処理結果」に変更する。（ない場合は新規作成ブックのsheet1を利用）
-            Call 雛形シートコピー(targetWB)
+            Call 雛形シートコピー(wb結果ブック)
             
             ' 結果貼り付け行の取得。
             ' A列に値が設定されている行を、表題欄としてその行数を取得する
-            Dim MaxRow As Integer
-            With targetWB.ActiveSheet.UsedRange
-                MaxRow = .Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
+            Dim lng最大行 As Long
+            With wb結果ブック.ActiveSheet.UsedRange
+                lng最大行 = .Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
             End With
+            
             ' 結果貼り付け行の設定。
-            MaxRow = MaxRow + 1
+            lng最大行 = lng最大行 + 1
             
             ' 結果貼り付け
-            targetWB.ActiveSheet.Range(Cells(MaxRow, 1), Cells(UBound(results, 2) + 2, UBound(results) + 1)) = 二次元配列行列逆転(results)
+            wb結果ブック.ActiveSheet.Range( _
+                Cells(lng最大行, 1), _
+                Cells(UBound(results, 2) + 2, UBound(results) + 1)) = 二次元配列行列逆転(results)
             
-            Dim MaxCol As Integer
+            Dim lng最大列 As Long
             ' 書式コピー
-            With targetWB.ActiveSheet
-                MaxRow = .UsedRange.Find("*", , xlFormulas, xlByRows, xlPrevious).Row
-                MaxCol = .UsedRange.Find("*", , xlFormulas, xlByColumns, xlPrevious).Column
+            With wb結果ブック.ActiveSheet
+                lng最大行 = .UsedRange.Find("*", , xlFormulas, xlByRows, xlPrevious).Row
+                lng最大列 = .UsedRange.Find("*", , xlFormulas, xlByColumns, xlPrevious).Column
                 
-                .Range(.Cells(2, 1), .Cells(2, MaxCol)).Copy
-                .Range(.Cells(2 + 1, 1), .Cells(MaxRow, MaxCol)).PasteSpecial (xlPasteFormats)
+                .Range(.Cells(2, 1), .Cells(2, lng最大列)).Copy
+                .Range(.Cells(2 + 1, 1), .Cells(lng最大行, lng最大列)).PasteSpecial (xlPasteFormats)
             End With
             
             ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-            Call 実行結果書式編集処理(targetWB.ActiveSheet)
+            Call 実行結果書式編集処理(wb結果ブック.ActiveSheet)
             
             ' "A1"を選択状態にする
-            targetWB.ActiveSheet.Cells(1, 1).Select
+            wb結果ブック.ActiveSheet.Cells(1, 1).Select
             
             ' シート名「処理結果」以外のシートを削除する
-            Call 不要シート削除(targetWB, RESULT_SHEET_NAME)
+            Call 不要シート削除(wb結果ブック, RESULT_SHEET_NAME)
             
         Else
             
@@ -292,7 +257,7 @@ Function ファイル処理(fileNames() As String)
     
     If Not Not results Then
         If UBound(results, 2) <> 0 Then
-            targetWB.Activate
+            wb結果ブック.Activate
         End If
     End If
 
@@ -304,38 +269,29 @@ End Function
 ' * 　　　　シート名を「処理結果」に変更する
 ' *********************************************************************************************************************
 '
-Sub 雛形シートコピー(targetWB As Workbook)
+Sub 雛形シートコピー(wbコピー先ブック As Workbook)
 
-    Dim myWorkBook  As String
-    Dim newWorkBook As String
-    Dim targetSheet As Worksheet
-    Dim sheetName   As String
-    
-    ' マクロを実行中のブック名を取得
-    myWorkBook = ThisWorkbook.Name
-    
-    ' 新規ブック名を取得
-    newWorkBook = targetWB.Name
-    
     ' マクロ実行時のブックをアクティブにする
-    Workbooks(myWorkBook).Activate
+    ThisWorkbook.Activate
     
     ' シート「雛形」があった場合、指定ブックにコピー（一番前に挿入）する
-    Dim i As Integer
-    For i = 1 To Workbooks(myWorkBook).Worksheets.Count ' シートの数分ループする
+    Dim i As Long
+    For i = 1 To ThisWorkbook.Worksheets.Count ' シートの数分ループする
     
-        Set targetSheet = Workbooks(myWorkBook).Worksheets(i)
+        Dim targetSheet As Worksheet
+        Set targetSheet = ThisWorkbook.Worksheets(i)
         
-        If TEMPLATE_SHEET_NAME = targetSheet.Name Then
-            Workbooks(myWorkBook).Sheets(TEMPLATE_SHEET_NAME).Copy _
-            Before:=Workbooks(newWorkBook).Sheets(1)
+        If TEMPLATE_SHEET_NAME = ThisWorkbook.Worksheets(i).Name Then
+        
+            ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME).Copy Before:=wbコピー先ブック.Sheets(1)
         End If
         
     Next i
     
     ' マクロを実行中のブックをアクティブにする
-    Workbooks(targetWB.Name).Sheets(TEMPLATE_SHEET_NAME).Activate
+    Workbooks(wbコピー先ブック.Name).Sheets(TEMPLATE_SHEET_NAME).Activate
+    
     ' シート名を「処理結果」に変更する
-    Workbooks(targetWB.Name).Sheets(TEMPLATE_SHEET_NAME).Name = RESULT_SHEET_NAME
+    Workbooks(wbコピー先ブック.Name).Sheets(TEMPLATE_SHEET_NAME).Name = RESULT_SHEET_NAME
     
 End Sub

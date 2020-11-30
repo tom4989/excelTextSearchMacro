@@ -37,6 +37,8 @@ End Enum
 ' 変数
 ' ---------------------------------------------------------------------------------------------------------------------
 
+Private objFSO As Object
+
 ' ルートパス作成済フラグ
 Private rootPathMaked As Boolean
 
@@ -69,6 +71,20 @@ End Function
 ' #####################################################################################################################
 
 ' *********************************************************************************************************************
+' * 機能　：ファイル名取得
+' *********************************************************************************************************************
+'
+Function ファイル名取得(txtパス As String) As String
+
+    If objFSO Is Nothing Then
+        Set objFSO = CreateObject("Scripting.FileSystemObject")
+    End If
+
+    objFSO.GetFileName (txtパス)
+
+End Function
+
+' *********************************************************************************************************************
 ' * 機能　：パス（パス＆ファイル）の存在チェック
 ' * 引数　：directoryPath パス（または、パス＆ファイル）
 ' * 戻り値：チェック結果（パス存在時は1、ファイル存在時は2、パスもファイルも存在しない場合は-1）
@@ -76,13 +92,13 @@ End Function
 '
 Function isDirectoryExist(directoryPath As String) As Long
 
-    Dim FSO
+    If objFSO Is Nothing Then
+        Set objFSO = CreateObject("Scripting.FileSystemObject")
+    End If
     
-    Set FSO = CreateObject("Scripting.FileSystemObject")
-    
-    If True = FSO.FileExists(directoryPath) Then
+    If True = objFSO.FileExists(directoryPath) Then
         isDirectoryExist = 2
-    ElseIf True = FSO.FolderExists(directoryPath) Then
+    ElseIf True = objFSO.FolderExists(directoryPath) Then
         isDirectoryExist = 1
     Else
         isDirectoryExist = -1
