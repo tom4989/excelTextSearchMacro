@@ -5,8 +5,6 @@ Option Explicit
 ' 定数
 ' ---------------------------------------------------------------------------------------------------------------------
 
-Public Const TITLE_NAME_PREFIX = "▼"
-
 ' ---------------------------------------------------------------------------------------------------------------------
 ' 変数
 ' ---------------------------------------------------------------------------------------------------------------------
@@ -382,6 +380,55 @@ Public Function containArray(var配列 As Variant, txt対象文字列 As String) As Boo
     Next i
     
     containArray = False
+
+End Function
+
+' *********************************************************************************************************************
+' 機能：対象の配列に、指定された文字列が格納されているか判定する
+' *********************************************************************************************************************
+'
+Public Function f_配列含まれているかチェック( _
+    var配列 As Variant, txt対象文字列 As String, _
+    Optional flg文字列にワイルドカードあり As Boolean = False, _
+    Optional flg配列にワイルドカードあり As Boolean = False) As Boolean
+
+    Dim i As Long
+    
+    If IsArrayEx(var配列) <> 1 Then
+    
+        f_配列含まれているかチェック = False
+        Exit Function
+    End If
+    
+    For i = LBound(var配列) To UBound(var配列)
+    
+        If var配列(i) = txt対象文字列 Then
+        
+            f_配列含まれているかチェック = True
+            Exit Function
+        End If
+        
+        If flg文字列にワイルドカードあり Then
+        
+            If var配列(i) Like txt対象文字列 Then
+            
+                f_配列含まれているかチェック = True
+                Exit Function
+            End If
+        End If
+        
+        If flg配列にワイルドカードあり Then
+        
+            If txt対象文字列 Like var配列(i) Then
+            
+                f_配列含まれているかチェック = True
+                Exit Function
+            End If
+        End If
+        
+    Next i
+    
+    f_配列含まれているかチェック = False
 
 End Function
 

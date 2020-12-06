@@ -14,12 +14,14 @@ Option Explicit
 ' *********************************************************************************************************************
 '
 Const cnstシート名 = "★設定値"
-
+Const cnstブックシート名 = "*ブックシート名"
 
 ' *********************************************************************************************************************
 ' 変数
 ' *********************************************************************************************************************
 '
+Private objReg As Object
+
 Private dic設定値リスト As Object
 
 Public Property Get 設定値リスト() As Object
@@ -115,7 +117,7 @@ Public Sub ロード(Optional txt設定値シート As String = cnstシート名)
                             
                             var設定値 = objDic.Item(varシートの値全体(i, j))
                             ReDim Preserve var設定値(UBound(var設定値) + 1)
-                            var設定値(UBound(var設定値)) = varシートの値全体(i, j + 1)
+                            var設定値(UBound(var設定値)) = エスケープ(varシートの値全体(i, j), varシートの値全体(i, j + 1))
                     
                             objDic.Item(varシートの値全体(i, j)) = var設定値
                     
@@ -123,12 +125,12 @@ Public Sub ロード(Optional txt設定値シート As String = cnstシート名)
                         ElseIf 階層一致確認(varシートの値全体, i, j) Then
                         
                             ReDim var設定値(0)
-                            var設定値(0) = varシートの値全体(i, j + 1)
+                            var設定値(0) = エスケープ(varシートの値全体(i, j), varシートの値全体(i, j + 1))
                             Call objDic.Add(varシートの値全体(i, j), var設定値)
                             
                         Else
                     
-                            Call objDic.Add(varシートの値全体(i, j), varシートの値全体(i, j + 1))
+                            Call objDic.Add(varシートの値全体(i, j), エスケープ(varシートの値全体(i, j), varシートの値全体(i, j + 1)))
                     
                         End If
                         
@@ -152,6 +154,7 @@ Private Function 階層一致確認(ByRef var検証対象() As Variant, lng行数 As Long, l
     If lng行数 = UBound(var検証対象) Then
     
         階層一致確認 = False
+        Exit Function
     End If
 
     Dim i, j As Long
@@ -170,3 +173,27 @@ Private Function 階層一致確認(ByRef var検証対象() As Variant, lng行数 As Long, l
     階層一致確認 = True
 
 End Function
+
+' *********************************************************************************************************************
+' 機能：ブックシート名の[]を、Like演算子で使用できるようにエスケープする
+' *********************************************************************************************************************
+'
+Function エスケープ(txt項目名, txt項目値) As String
+
+    If Not (txt項目名 Like cnstブックシート名) Then
+    
+        エスケープ = txt項目値
+        Exit Function
+    End If
+
+    If objReg Is Nothing Then
+        Set objReg = CreateObject("VBScript.RegExp")
+        
+        objReg.Pattern = "^\["
+    End If
+    
+    エスケープ = Replace(txt項目値, "]", "[]]")
+    エスケープ = objReg.Replace(エスケープ, "[[]")
+    
+End Function
+
