@@ -362,6 +362,19 @@ ERROR_:
 End Function
 
 ' *********************************************************************************************************************
+' 機能　：シート内容を格納した配列から座標(A1等)を指定して値を取得する
+' *********************************************************************************************************************
+'
+Public Function f_セル座標の値取得(ByRef var配列 As Variant, txtセル座標 As String) As String
+
+    Dim var座標 As Variant
+    var座標 = CAlpNum2Num(txtセル座標)
+
+    funcセル座標の値取得 = var配列(var座標(0), var座標(1))
+
+End Function
+
+' *********************************************************************************************************************
 ' 機能　：対象の配列に、指定された文字列が格納されているか判定する
 ' *********************************************************************************************************************
 '
@@ -690,5 +703,28 @@ Function CAlpxAlp2Num(txtAlpxAlp As String) As Variant
     
 End Function
 
+' *********************************************************************************************************************
+' 機能：セル座標を数字に変換する
+' *********************************************************************************************************************
+'
+Function CAlpNum2Num(txt座標 As String) As Variant
 
+    Dim var結果 As Variant
+    ReDim var結果(1)
+
+    Dim objReg As Object, objMatch As Object
+    
+    Set objReg = CreateObject("VBScript.RegExp")
+    objReg.Pattern = "^([A-Z]+)([0-9]+)$"
+
+    Set objMatch = objReg.Execute(txt座標)
+
+    Dim txt行 As String, txt列 As String
+    
+    var結果(0) = CLng(CAlp2Num(objMatch(0).SubMatches(0)))
+    var結果(1) = CLng(objMatch(0).SubMatches(1))
+
+    CAlpNum2Num = var結果
+
+End Function
 
