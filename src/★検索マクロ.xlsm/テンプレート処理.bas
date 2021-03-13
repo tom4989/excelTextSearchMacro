@@ -21,6 +21,13 @@ Private Const KEY_対象外ブックシート = "対象外ブックシート名"
 ' 設定値リスト
 Public obj設定値シート As cls設定値シート
 
+' 雛形最終列
+Public lng雛形最終列 As Long
+
+' 雛形開始行
+Public lng雛形開始行 As Long
+
+
 ' *********************************************************************************************************************
 ' * 機能　：マクロ呼び出し時（シートからの指定用）
 ' *********************************************************************************************************************
@@ -46,6 +53,9 @@ Sub マクロ開始()
 
     ' ★ConcreateProcess側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
     Call 全体前処理(wsマクロ呼び出し元シート)
+
+    lng雛形開始行 = 最終行取得(ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME), False) + 1
+    lng雛形最終列 = 最終列取得(ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME))
 
     ' -----------------------------------------------------------------------------------------------------------------
     ' パスの存在チェック
@@ -246,16 +256,26 @@ Function ファイル処理(txtパス一覧() As String)
             ' 結果貼り付け
             wb結果ブック.ActiveSheet.Range( _
                 Cells(lng最大行, 1), _
-                Cells(UBound(results, 2) + 2, UBound(results) + 1)) = 二次元配列行列逆転(results)
+                Cells(UBound(results, 2) + lng雛形開始行, UBound(results) + 1)) = 二次元配列行列逆転(results)
             
             Dim lng最大列 As Long
             ' 書式コピー
             With wb結果ブック.ActiveSheet
-                lng最大行 = .UsedRange.Find("*", , xlFormulas, xlByRows, xlPrevious).Row
-                lng最大列 = .UsedRange.Find("*", , xlFormulas, xlByColumns, xlPrevious).Column
+                lng最大行 = 最終行取得(wb結果ブック.ActiveSheet, False)
+                lng最大列 = 最終列取得(wb結果ブック.ActiveSheet, False)
                 
-                .Range(.Cells(2, 1), .Cells(2, lng最大列)).Copy
-                .Range(.Cells(2 + 1, 1), .Cells(lng最大行, lng最大列)).PasteSpecial (xlPasteFormats)
+                .Range(.Cells(lng雛形開始行, 1), .Cells(lng雛形開始行, lng最大列)).Copy
+                .Range(.Cells(lng雛形開始行 + 1, 1), .Cells(lng最大行, lng最大列)).PasteSpecial (xlPasteFormats)
+                
+                For i = lng雛形開始行 To lng最大行
+                
+                    ' ハイパーリンク設定
+                    Dim strHyperLink As String
+                    strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&" & _
+                        "C" & i & "&""!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
+            
+                    .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
+                Next
             End With
             
             ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）

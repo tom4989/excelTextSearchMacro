@@ -163,23 +163,13 @@ End Function
 '
 Sub 実行結果書式編集処理(ByRef ws対象シート As Worksheet)
 
-    Dim i, lng最終行, lng最終列 As Long
+    Dim i As Long
+    Dim lng最終行 As Long: lng最終行 = 最終行取得(ws対象シート, False)
     
     With ws対象シート
-        lng最終行 = .UsedRange.Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
-        lng最終列 = .UsedRange.Find("*", , xlFormulas, , xlByColumns, xlPrevious).Column
-        
-        ' 書式コピー
-        .Range(Cells(2, 1), Cells(2, lng最終列)).Copy
-        .Range(Cells(2 + 1, 1), Cells(lng最終行, lng最終列)).PasteSpecial (xlPasteFormats)
-        
-        For i = 2 To lng最終行
-            ' ハイパーリンク設定
-            Dim strHyperLink As String
-            strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&C" & i & "&""!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
-            
-            .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
-            
+
+        For i = lng雛形開始行 To lng最終行
+
             ' 赤文字
             Call 検索該当文字の赤太文字化(.Range(Cells(i, 7), Cells(i, 7)), Cells(i, 5))
             

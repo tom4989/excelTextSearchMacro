@@ -153,11 +153,20 @@ End Function
 ' * 機能　：引数で渡されたシートの最終行を取得する
 ' *********************************************************************************************************************
 '
-Function 最終行取得(targetSheet As Worksheet) As Long
+Function 最終行取得(ws対象シート As Worksheet, Optional useUsedRange As Boolean = True) As Long
 
-    With targetSheet
-        最終行取得 = .Cells.Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
-    End With
+    If useUsedRange Then
+
+        With ws対象シート.UsedRange
+            最終行取得 = .Rows(.Rows.Count).Row
+        End With
+        
+    Else
+        With ws対象シート
+            最終行取得 = .Cells.Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
+        End With
+        
+    End If
         
 End Function
 
@@ -166,11 +175,20 @@ End Function
 ' * 機能　：引数で渡されたシートの最終列を取得する
 ' *********************************************************************************************************************
 '
-Function 最終列取得(targetSheet As Worksheet) As Long
+Function 最終列取得(ws対象シート As Worksheet, Optional useUsedRange As Boolean = True) As Long
 
-    With targetSheet
+    If useUsedRange Then
+
+        With ws対象シート.UsedRange
+            最終列取得 = .Columns(.Columns.Count).Column
+        End With
+        
+    Else
+        With ws対象シート
             最終列取得 = .Cells.Find("*", , xlFormulas, , xlByColumns, xlPrevious).Column
-    End With
+        End With
+    
+    End If
         
 End Function
 
