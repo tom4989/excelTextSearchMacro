@@ -6,7 +6,6 @@ Option Explicit
 ' ---------------------------------------------------------------------------------------------------------------------
 
 ' 雛形シートコピー用（共通）
-Public Const TEMPLATE_SHEET_NAME = "雛形"
 Public Const RESULT_SHEET_NAME = "処理結果"
 
 ' 処理結果シートデータ貼付け部の列数
@@ -177,7 +176,7 @@ Sub 実行結果書式編集処理(ByRef ws対象シート As Worksheet)
         For i = 2 To lng最終行
             ' ハイパーリンク設定
             Dim strHyperLink As String
-            strHyperLink = editHYPERLINK数式(.Cells(i, 1), .Cells(i, 2), .Cells(i, 3), .Cells(i, 4))
+            strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&C" & i & "&""!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
             
             .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
             

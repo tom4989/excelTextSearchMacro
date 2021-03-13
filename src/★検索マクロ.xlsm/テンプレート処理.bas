@@ -5,6 +5,8 @@ Option Explicit
 ' íËêî
 ' ---------------------------------------------------------------------------------------------------------------------
 
+Public Const TEMPLATE_SHEET_NAME = "êóå`"
+
 ' ëŒè€ÇÃägí£éq
 Private Const FILE_EXTENSION = "xls,xlsx,xlsm"
 
