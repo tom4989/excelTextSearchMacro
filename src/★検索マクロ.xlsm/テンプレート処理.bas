@@ -308,6 +308,12 @@ Function ファイル処理(txtパス一覧() As String)
             ' シート名「処理結果」以外のシートを削除する
             Call 不要シート削除(wb結果ブック, RESULT_SHEET_NAME)
             
+            If obj設定値シート.設定値リスト.Item("保存先") <> "" Then
+            
+                wb結果ブック.SaveAs (obj設定値シート.設定値リスト.Item("保存先"))
+            
+            End If
+            
         Else
             
             MsgBox "処理結果は0件です。"
