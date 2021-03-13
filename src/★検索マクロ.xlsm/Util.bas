@@ -789,6 +789,6 @@ Function f_RTRIM(txt‘ÎÛ•¶š—ñ As String, txtw’è•¶š As String) As String
         
     End If
     
-    f_RTRIM = ""
+    f_RTRIM = txt‘ÎÛ•¶š—ñ
     
 End Function

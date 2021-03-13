@@ -310,7 +310,18 @@ Function ファイル処理(txtパス一覧() As String)
             
             If obj設定値シート.設定値リスト.Item("保存先") <> "" Then
             
-                wb結果ブック.SaveAs (obj設定値シート.設定値リスト.Item("保存先"))
+                Dim txt保存先 As String
+                txt保存先 = obj設定値シート.設定値リスト.Item("保存先")
+            
+                If obj設定値シート.設定値リスト.Item("保存時サフィックス") <> "" Then
+                
+                    txt保存先 = Replace( _
+                        txt保存先, _
+                        ".xlsx", _
+                        Format(Now, obj設定値シート.設定値リスト.Item("保存時サフィックス")) & ".xlsx")
+                End If
+            
+                wb結果ブック.SaveAs (txt保存先)
             
             End If
             
