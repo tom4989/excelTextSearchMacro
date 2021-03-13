@@ -27,6 +27,8 @@ Public lng雛形最終列 As Long
 ' 雛形開始行
 Public lng雛形開始行 As Long
 
+' パス共通部
+Private txtパス共通部 As String
 
 ' *********************************************************************************************************************
 ' * 機能　：マクロ呼び出し時（シートからの指定用）
@@ -62,6 +64,7 @@ Sub マクロ開始()
     ' -----------------------------------------------------------------------------------------------------------------
 
     Dim txtパス As Variant
+    txtパス共通部 = ""
 
     With wsマクロ呼び出し元シート
 
@@ -74,8 +77,21 @@ Sub マクロ開始()
                 MsgBox "以下のパスは存在しません。" + Chr(10) + "「" + txtパス + "」"
                 End
             End If
+            
+            If txtパス共通部 = "" Then
+            
+                txtパス共通部 = txtパス
+            
+            Else
+            
+                txtパス共通部 = f_共通部取得(CStr(txtパス), txtパス共通部)
+            
+            End If
+            
         Next
     End With
+    
+    txtパス共通部 = f_RTRIM(txtパス共通部, "\")
 
     ' -----------------------------------------------------------------------------------------------------------------
     ' ファイル名の収集
@@ -252,8 +268,10 @@ Function ファイル処理(txtパス一覧() As String)
             
             ' 結果貼り付け行の設定。
             lng最大行 = lng最大行 + 1
-            
+
             ' 結果貼り付け
+            wb結果ブック.ActiveSheet.Range("B1") = txtパス共通部
+
             wb結果ブック.ActiveSheet.Range( _
                 Cells(lng最大行, 1), _
                 Cells(UBound(results, 2) + lng雛形開始行, UBound(results) + 1)) = 二次元配列行列逆転(results)
@@ -269,6 +287,9 @@ Function ファイル処理(txtパス一覧() As String)
                 
                 For i = lng雛形開始行 To lng最大行
                 
+                    ' 共通部を関数化
+                    .Cells(i, 1) = "=B1 & """ & Replace(.Cells(i, 1), txtパス共通部, "") & """"
+
                     ' ハイパーリンク設定
                     Dim strHyperLink As String
                     strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&" & _
