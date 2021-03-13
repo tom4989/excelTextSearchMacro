@@ -73,17 +73,12 @@ End Function
 '
 Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet, ByRef results() As Variant)
 
-    Dim FSO
-    Set FSO = CreateObject("Scripting.FileSystemObject")
-
     ' -----------------------------------------------------------------------------------------------------------------
     ' 処理
     ' -----------------------------------------------------------------------------------------------------------------
     
     ' 指定された検索文言リストの文字列の検索結果を収集する。
     Dim txt検索ワード As Variant
-    
-    Dim lngResultCount As Long
     
     ' 検索文言リスト分ループ
     For Each txt検索ワード In obj設定値シート.設定値リスト.Item(KEY_検索ワード)
@@ -111,16 +106,7 @@ Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet, ByR
 
         Do
             ' 結果を格納する
-            Call reDimResult(RESULT_COL_LENGTH, results)
-            lngResultCount = UBound(results, 2)
-            
-            results(0, lngResultCount) = txt検索ワード                             ' 検索文言
-            results(1, lngResultCount) = FSO.GetParentFolderName(txtファイルパス)  ' フォルダ名
-            results(2, lngResultCount) = FSO.GetFileName(txtファイルパス)          ' ファイル名
-            results(3, lngResultCount) = ws対象シート.Name                         ' シート名
-            results(4, lngResultCount) = rng検索結果.Address(False, False)         ' 座標
-            results(5, lngResultCount) = "セル"                                    ' セル／オートシェイプ
-            results(6, lngResultCount) = rng検索結果.Value                         ' 文字列
+            Call 結果記録(results, rng検索結果, Array(txt検索ワード, "セル", rng検索結果.Value))
             
             Set rng検索結果 = ws対象シート.UsedRange.FindNext(After:=rng検索結果)
             
@@ -143,16 +129,8 @@ GotoCellSearchEnd:
                 If Not IsEmpty(varオートシェイプの文字列) And InStr(varオートシェイプの文字列, txt検索ワード) Then
                 
                     ' 結果を格納する
-                    Call reDimResult(RESULT_COL_LENGTH, results)
-                    lngResultCount = UBound(results, 2)
-                    
-                    results(0, lngResultCount) = txt検索ワード                            ' 検索文言
-                    results(1, lngResultCount) = FSO.GetParentFolderName(txtファイルパス) ' フォルダ名
-                    results(2, lngResultCount) = FSO.GetFileName(txtファイルパス)         ' ファイル名
-                    results(3, lngResultCount) = ws対象シート.Name                        ' シート名
-                    results(4, lngResultCount) = varオートシェイプリスト(i, 7)            ' 座標
-                    results(5, lngResultCount) = "オートシェイプ"                         ' セル／オートシェイプ
-                    results(6, lngResultCount) = varオートシェイプの文字列                ' 文字列
+                    Call 結果記録(results, ws対象シート.Range(varオートシェイプリスト(i, 7)), _
+                        Array(txt検索ワード, "オートシェイプ", varオートシェイプの文字列))
                 End If
             Next i
         End If
@@ -199,12 +177,12 @@ Sub 実行結果書式編集処理(ByRef ws対象シート As Worksheet)
         For i = 2 To lng最終行
             ' ハイパーリンク設定
             Dim strHyperLink As String
-            strHyperLink = editHYPERLINK数式(.Cells(i, 2), .Cells(i, 3), .Cells(i, 4), .Cells(i, 5))
+            strHyperLink = editHYPERLINK数式(.Cells(i, 1), .Cells(i, 2), .Cells(i, 3), .Cells(i, 4))
             
-            .Range(.Cells(i, 5), .Cells(i, 5)).Value = strHyperLink
+            .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
             
             ' 赤文字
-            Call 検索該当文字の赤太文字化(.Range(Cells(i, 7), Cells(i, 7)), Cells(i, 1))
+            Call 検索該当文字の赤太文字化(.Range(Cells(i, 7), Cells(i, 7)), Cells(i, 5))
             
         Next
     End With
@@ -217,6 +195,7 @@ End Sub
 '
 Function 全体後処理(ws対象シート As Worksheet)
 
+
 End Function
 
 ' #####################################################################################################################
@@ -226,4 +205,27 @@ End Function
 ' #####################################################################################################################
 '
 
-' なし
+Private Function 結果記録(ByRef results() As Variant, rng対象セル As Range, var出力内容 As Variant) As Variant
+
+    Call reDimResult(RESULT_COL_LENGTH, results)
+
+    Dim lng列 As Long: lng列 = UBound(results, 2)
+
+    ' フォルダ名
+    results(0, lng列) = rng対象セル.Parent.Parent.Path
+    ' ファイル名
+    results(1, lng列) = rng対象セル.Parent.Parent.Name
+    ' シート名
+    results(2, lng列) = rng対象セル.Parent.Name
+    ' セル座標
+    results(3, lng列) = rng対象セル.Address(False, False)
+    
+    Dim i As Long
+    
+    For i = LBound(var出力内容) To UBound(var出力内容)
+    
+        results(4 + i, lng列) = var出力内容(i)
+    
+    Next i
+    
+End Function
