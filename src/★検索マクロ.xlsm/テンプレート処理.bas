@@ -384,3 +384,45 @@ Sub 雛形シートコピー(wbコピー先ブック As Workbook)
     Workbooks(wbコピー先ブック.Name).Sheets(TEMPLATE_SHEET_NAME).Name = RESULT_SHEET_NAME
     
 End Sub
+
+
+' *********************************************************************************************************************
+' * 機能　：結果出力の共通部分の処理
+' *********************************************************************************************************************
+'
+Public Function f_結果記録(ByRef results() As Variant, rng対象セル As Range, var出力内容 As Variant) As Variant
+
+    Call reDimResult(lng雛形最終列, results)
+
+    Dim lng列 As Long: lng列 = UBound(results, 2)
+
+    ' フォルダ名
+    results(0, lng列) = rng対象セル.Parent.Parent.Path
+    ' ファイル名
+    results(1, lng列) = rng対象セル.Parent.Parent.Name
+    ' シート名
+    results(2, lng列) = rng対象セル.Parent.Name
+    ' セル座標
+    results(3, lng列) = rng対象セル.Address(False, False)
+    
+    Dim i As Long
+    
+    For i = LBound(var出力内容) To UBound(var出力内容)
+    
+        If lng雛形最終列 < 4 + i Then
+        
+            log ("出力内容が雛形のサイズを超えています。" & _
+                "出力内容：" & 4 + UBound(var出力内容) & "。" & _
+                "雛形：" & lng雛形最終列 & "。")
+                
+        Else
+        
+            results(4 + i, lng列) = var出力内容(i)
+            
+        End If
+    Next i
+    
+End Function
+
+
+

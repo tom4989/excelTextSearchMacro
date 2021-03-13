@@ -8,9 +8,6 @@ Option Explicit
 ' 雛形シートコピー用（共通）
 Public Const RESULT_SHEET_NAME = "処理結果"
 
-' 処理結果シートデータ貼付け部の列数
-Private Const RESULT_COL_LENGTH = 6
-
 ' ---------------------------------------------------------------------------------------------------------------------
 ' 定数（個別）
 ' ---------------------------------------------------------------------------------------------------------------------
@@ -105,7 +102,7 @@ Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet, ByR
 
         Do
             ' 結果を格納する
-            Call 結果記録(results, rng検索結果, Array(txt検索ワード, "セル", rng検索結果.Value))
+            Call f_結果記録(results, rng検索結果, Array(txt検索ワード, "セル", rng検索結果.Value))
             
             Set rng検索結果 = ws対象シート.UsedRange.FindNext(After:=rng検索結果)
             
@@ -128,7 +125,7 @@ GotoCellSearchEnd:
                 If Not IsEmpty(varオートシェイプの文字列) And InStr(varオートシェイプの文字列, txt検索ワード) Then
                 
                     ' 結果を格納する
-                    Call 結果記録(results, ws対象シート.Range(varオートシェイプリスト(i, 7)), _
+                    Call f_結果記録(results, ws対象シート.Range(varオートシェイプリスト(i, 7)), _
                         Array(txt検索ワード, "オートシェイプ", varオートシェイプの文字列))
                 End If
             Next i
@@ -194,27 +191,4 @@ End Function
 ' #####################################################################################################################
 '
 
-Private Function 結果記録(ByRef results() As Variant, rng対象セル As Range, var出力内容 As Variant) As Variant
-
-    Call reDimResult(RESULT_COL_LENGTH, results)
-
-    Dim lng列 As Long: lng列 = UBound(results, 2)
-
-    ' フォルダ名
-    results(0, lng列) = rng対象セル.Parent.Parent.Path
-    ' ファイル名
-    results(1, lng列) = rng対象セル.Parent.Parent.Name
-    ' シート名
-    results(2, lng列) = rng対象セル.Parent.Name
-    ' セル座標
-    results(3, lng列) = rng対象セル.Address(False, False)
-    
-    Dim i As Long
-    
-    For i = LBound(var出力内容) To UBound(var出力内容)
-    
-        results(4 + i, lng列) = var出力内容(i)
-    
-    Next i
-    
-End Function
+' なし
