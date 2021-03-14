@@ -483,7 +483,7 @@ End Function
 ' 機能　：一次元配列に新たな要素を追加する
 ' *********************************************************************************************************************
 '
-Function 一次配列に値を追加(ByRef valueList As Variant, ByVal 追加設定値 As String)
+Function 一次元配列に値を追加(ByRef valueList As Variant, ByVal 追加設定値 As String)
 
     ' ファイル名を取得する
     Select Case IsArrayEx(valueList)

@@ -107,6 +107,18 @@ Function isDirectoryExist(directoryPath As String) As Long
 End Function
 
 ' *********************************************************************************************************************
+' * 機能　：フォルダが存在しなかったら作成する
+' *********************************************************************************************************************
+'
+Function mkdirIFNotExist(txtフォルダ名 As String)
+
+    If Dir(txtフォルダ名, vbDirectory) = "" Then
+        mkdir txtフォルダ名
+    End If
+
+End Function
+
+' *********************************************************************************************************************
 ' * 機能　：パス配下の階層全てのディレクトリを処理する
 ' * 引数　：directoryPath パス
 ' * 戻り値：実行結果（カレントディレクトリを含む、配下のディレクトリ名の配列
@@ -190,7 +202,7 @@ Function getFileNames(directoryPath As String, fileExtensions As Variant, ByRef 
             If InStr(1, UCase(fileName), UCase(fileExtension)) > 0 Then
             
                 ' フルパス＆ファイル名を追加格納。
-                Call 一次配列に値を追加(fileNames, directoryPath & "\" & fileName)
+                Call 一次元配列に値を追加(fileNames, directoryPath & "\" & fileName)
                 Exit For
         
             End If
@@ -222,7 +234,7 @@ Function getDirNames(directoryPath As String) As String()
             If buf <> "." And buf <> ".." Then
             
                 ' ディレクトリ名を追加格納。
-                Call 一次配列に値を追加(dirNames, directoryPath & "\" & buf)
+                Call 一次元配列に値を追加(dirNames, directoryPath & "\" & buf)
                 
             End If
         End If
@@ -259,7 +271,7 @@ Function ディレクトリ作成(ByVal ルートパス As String, ByVal 処理日時 As String, 
     ' ディレクトリ作成
     dirCheck = isDirectoryExist(CStr(ルートパス & 処理日時 & PATH_DELIMITER & 相対パス))
     If 0 > dirCheck Then
-        MkDir ルートパス & 処理日時 & PATH_DELIMITER & 相対パス
+        mkdir ルートパス & 処理日時 & PATH_DELIMITER & 相対パス
         Call setRootPathMaked(True)
     End If
     
