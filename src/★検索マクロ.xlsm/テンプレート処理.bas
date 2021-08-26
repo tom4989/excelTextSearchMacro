@@ -5,8 +5,6 @@ Option Explicit
 ' 定数
 ' ---------------------------------------------------------------------------------------------------------------------
 
-Public Const TEMPLATE_SHEET_NAME = "雛形"
-
 ' 対象の拡張子
 Private Const FILE_EXTENSION = "xls,xlsx,xlsm"
 
@@ -21,22 +19,24 @@ Private Const KEY_対象外ブックシート = "対象外ブックシート名"
 ' 設定値リスト
 Public obj設定値シート As cls設定値シート
 
-' 雛形最終列
-Public lng雛形最終列 As Long
-
-' 雛形開始行
-Public lng雛形開始行 As Long
+' 結果出力シート
+Public obj結果出力シート As cls結果出力シート
 
 ' パス共通部
 Private txtパス共通部 As String
+
+' サイレントモード
+Private flgサイレントモード As Boolean
 
 ' *********************************************************************************************************************
 ' * 機能　：マクロ呼び出し時（シートからの指定用）
 ' *********************************************************************************************************************
 
-Sub マクロ開始()
+Sub マクロ開始(Optional argサイレントモード As Boolean = False)
 
     Call init開始時刻
+
+    flgサイレントモード = argサイレントモード
 
     log ("----------------------------------------------------------------------------------------------------")
     log ("マクロ開始")
@@ -44,6 +44,9 @@ Sub マクロ開始()
     
     Set obj設定値シート = New cls設定値シート
     obj設定値シート.ロード (ActiveSheet.Name)
+    
+    Set obj結果出力シート = New cls結果出力シート
+    Call obj結果出力シート.初期化(SHEET_NAME_TEMPLATE, SHEET_NAME_RESULT, argサイレントモード)
     
     ' -----------------------------------------------------------------------------------------------------------------
     ' 初期化処理
@@ -55,9 +58,6 @@ Sub マクロ開始()
 
     ' ★ConcreateProcess側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
     Call 全体前処理(wsマクロ呼び出し元シート)
-
-    lng雛形開始行 = 最終行取得(ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME), False) + 1
-    lng雛形最終列 = 最終列取得(ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME))
 
     ' -----------------------------------------------------------------------------------------------------------------
     ' パスの存在チェック
@@ -132,8 +132,8 @@ Sub マクロ開始()
     
     ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
     Call 全体後処理(wsマクロ呼び出し元シート)
-    
-    MsgBox "処理が終了しました。（処理時間：" & get処理時刻() & ")"
+
+    Call s_メッセージ通知("処理が終了しました。（処理時間：" & get処理時刻() & ")", flgサイレントモード)
 
     log ("----------------------------------------------------------------------------------------------------")
     log ("マクロ終了")
@@ -161,16 +161,13 @@ Function ファイル処理(txtパス一覧() As String)
     Application.DisplayAlerts = False ' ファイルを開く際の警告を無効
     Application.ScreenUpdating = False ' 画面表示更新を無効
     
-    ' 処理結果保持用
-    Dim results() As Variant
-    
     Dim index As Long, total As Long
         
     index = 1
     total = UBound(txtパス一覧) + 1
     
     Dim txtパス As Variant
-    
+
     For Each txtパス In txtパス一覧
     
         ' -------------------------------------------------------------------------------------------------------------
@@ -184,7 +181,7 @@ Function ファイル処理(txtパス一覧() As String)
         Set wb対象ブック = Workbooks.Open(txtパス, UpdateLinks:=0, IgnoreReadOnlyRecommended:=False)
         
         ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-        If ブックOPEN後処理(txtパス, wb対象ブック, results) Then
+        If ブックOPEN後処理(txtパス, wb対象ブック) Then
         
             ' ブックOPEN後処理の返り値がTrueの場合、シート毎の処理を続行する
         
@@ -215,7 +212,7 @@ Function ファイル処理(txtパス一覧() As String)
                 Else
                 
                     ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-                    Call シート毎処理(txtパス, ws対象シート, results)
+                    Call シート毎処理(txtパス, ws対象シート)
                 End If
                 
             Next i
@@ -224,7 +221,7 @@ Function ファイル処理(txtパス一覧() As String)
         
         ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
         Dim ファイルCLOSE方法区分値 As Long
-        ファイルCLOSE方法区分値 = ブックCLOSE前処理(txtパス, wb対象ブック, results)
+        ファイルCLOSE方法区分値 = ブックCLOSE前処理(txtパス, wb対象ブック)
         
         If ファイルCLOSE方法区分値 = ファイルCLOSE方法区分.保存しないで閉じる Then
             wb対象ブック.Close
@@ -242,178 +239,27 @@ Function ファイル処理(txtパス一覧() As String)
         
     ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
     ' 実行結果の編集（結果のマージ、並び替え、フィルタリング当）
-    Call 実行結果内容編集処理(results)
-    
+    Call 実行結果内容編集処理(obj結果出力シート.出力配列)
+
     Dim wb結果ブック As Workbook
-    
-    If Not Not results Then
-    
-        If UBound(results, 2) <> 0 Then
-        
-            ' ファイルの保存形式をexcel2007形式（.xlsx)に変更
-            Application.defaultSaveFormat = xlOpenXMLWorkbook
-            
-            Set wb結果ブック = Workbooks.Add
-            
-            ' 当ブックにシート「雛形」が用意されている場合、指定ブックの先頭にコピーした後、
-            ' シート名を「処理結果」に変更する。（ない場合は新規作成ブックのsheet1を利用）
-            Call 雛形シートコピー(wb結果ブック)
-            
-            ' 結果貼り付け行の取得。
-            ' A列に値が設定されている行を、表題欄としてその行数を取得する
-            Dim lng最大行 As Long
-            With wb結果ブック.ActiveSheet.UsedRange
-                lng最大行 = .Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
-            End With
-            
-            ' 結果貼り付け行の設定。
-            lng最大行 = lng最大行 + 1
+    Set wb結果ブック = obj結果出力シート.結果ブック作成(txtパス共通部)
 
-            ' 結果貼り付け
-            wb結果ブック.ActiveSheet.Range("B1") = txtパス共通部
-
-            wb結果ブック.ActiveSheet.Range( _
-                Cells(lng最大行, 1), _
-                Cells(UBound(results, 2) + lng雛形開始行, UBound(results) + 1)) = 二次元配列行列逆転(results)
-            
-            Dim lng最大列 As Long
-            ' 書式コピー
-            With wb結果ブック.ActiveSheet
-                lng最大行 = 最終行取得(wb結果ブック.ActiveSheet, False)
-                lng最大列 = 最終列取得(wb結果ブック.ActiveSheet, False)
-                
-                .Range(.Cells(lng雛形開始行, 1), .Cells(lng雛形開始行, lng最大列)).Copy
-                .Range(.Cells(lng雛形開始行 + 1, 1), .Cells(lng最大行, lng最大列)).PasteSpecial (xlPasteFormats)
-                
-                For i = lng雛形開始行 To lng最大行
-                
-                    ' 共通部を関数化
-                    .Cells(i, 1) = "=B1 & """ & Replace(.Cells(i, 1), txtパス共通部, "") & """"
-
-                    ' ハイパーリンク設定
-                    Dim strHyperLink As String
-                    strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&" & _
-                        "C" & i & "&""!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
-            
-                    .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
-                Next
-            End With
-            
-            ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
-            Call 実行結果書式編集処理(wb結果ブック.ActiveSheet)
-            
-            ' "A1"を選択状態にする
-            wb結果ブック.ActiveSheet.Cells(1, 1).Select
-            
-            ' シート名「処理結果」以外のシートを削除する
-            Call 不要シート削除(wb結果ブック, RESULT_SHEET_NAME)
-            
-            If obj設定値シート.設定値リスト.Item("保存先") <> "" Then
-            
-                wb結果ブック.SaveAs (f_日時サフィックス付与( _
-                    obj設定値シート.設定値リスト.Item("保存先"), _
-                    obj設定値シート.設定値リスト.Item("保存時サフィックス")))
-            
-            End If
-            
-        Else
-            
-            MsgBox "処理結果は0件です。"
-        End If
-        
-    Else
+    If obj結果出力シート.出力あり Then
     
-        MsgBox "処理結果は0件です。"
+        ' ★実装処理側の処理の呼び出し（呼び出し先のProcedure側ではツールごとの固有の実装を行う）
+        Call 実行結果書式編集処理(wb結果ブック.ActiveSheet)
+        wb結果ブック.Activate
         
+        Call obj結果出力シート.必要に応じて保存(obj設定値シート)
+
     End If
-            
+
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True
     
     Application.StatusBar = False
-    
+
     ' ファイルの保存形式を元の状態に戻す
     Application.defaultSaveFormat = defaultSaveFormat
-    
-    If Not Not results Then
-        If UBound(results, 2) <> 0 Then
-            wb結果ブック.Activate
-        End If
-    End If
 
 End Function
-
-
-' *********************************************************************************************************************
-' * 機能　：当ブックのシート「雛形」を指定ブックの先頭にコピーした後、
-' * 　　　　シート名を「処理結果」に変更する
-' *********************************************************************************************************************
-'
-Sub 雛形シートコピー(wbコピー先ブック As Workbook)
-
-    ' マクロ実行時のブックをアクティブにする
-    ThisWorkbook.Activate
-    
-    ' シート「雛形」があった場合、指定ブックにコピー（一番前に挿入）する
-    Dim i As Long
-    For i = 1 To ThisWorkbook.Worksheets.Count ' シートの数分ループする
-    
-        Dim targetSheet As Worksheet
-        Set targetSheet = ThisWorkbook.Worksheets(i)
-        
-        If TEMPLATE_SHEET_NAME = ThisWorkbook.Worksheets(i).Name Then
-        
-            ThisWorkbook.Sheets(TEMPLATE_SHEET_NAME).Copy Before:=wbコピー先ブック.Sheets(1)
-        End If
-        
-    Next i
-    
-    ' マクロを実行中のブックをアクティブにする
-    Workbooks(wbコピー先ブック.Name).Sheets(TEMPLATE_SHEET_NAME).Activate
-    
-    ' シート名を「処理結果」に変更する
-    Workbooks(wbコピー先ブック.Name).Sheets(TEMPLATE_SHEET_NAME).Name = RESULT_SHEET_NAME
-    
-End Sub
-
-
-' *********************************************************************************************************************
-' * 機能　：結果出力の共通部分の処理
-' *********************************************************************************************************************
-'
-Public Function f_結果記録(ByRef results() As Variant, rng対象セル As Range, var出力内容 As Variant) As Variant
-
-    Call reDimResult(lng雛形最終列, results)
-
-    Dim lng列 As Long: lng列 = UBound(results, 2)
-
-    ' フォルダ名
-    results(0, lng列) = rng対象セル.Parent.Parent.Path
-    ' ファイル名
-    results(1, lng列) = rng対象セル.Parent.Parent.Name
-    ' シート名
-    results(2, lng列) = rng対象セル.Parent.Name
-    ' セル座標
-    results(3, lng列) = rng対象セル.Address(False, False)
-    
-    Dim i As Long
-    
-    For i = LBound(var出力内容) To UBound(var出力内容)
-    
-        If lng雛形最終列 < 4 + i Then
-        
-            log ("出力内容が雛形のサイズを超えています。" & _
-                "出力内容：" & 4 + UBound(var出力内容) & "。" & _
-                "雛形：" & lng雛形最終列 & "。")
-                
-        Else
-        
-            results(4 + i, lng列) = var出力内容(i)
-            
-        End If
-    Next i
-    
-End Function
-
-
-

@@ -5,8 +5,14 @@ Option Explicit
 ' 定数（共通）
 ' ---------------------------------------------------------------------------------------------------------------------
 
-' 雛形シートコピー用（共通）
-Public Const RESULT_SHEET_NAME = "処理結果"
+' 処理結果のシート名
+Public Const SHEET_NAME_RESULT = "処理結果"
+
+' 雛形シート名
+Public Const SHEET_NAME_TEMPLATE = "雛形"
+
+' 当該マクロで結果が0件が正常か否かを表すフラグ
+Public Const flg結果0件は異常 = True
 
 ' ---------------------------------------------------------------------------------------------------------------------
 ' 定数（個別）
@@ -57,7 +63,7 @@ End Function
 ' 機能　：検出されたファイルのブックごとに行いたい処理を実装する（シート毎の処理呼び出しが必要かの判定値(boolean)を返却する）
 ' *********************************************************************************************************************
 '
-Function ブックOPEN後処理(txtファイルパス As Variant, wb対象ブック As Workbook, ByRef results() As Variant) As Boolean
+Function ブックOPEN後処理(txtファイルパス As Variant, wb対象ブック As Workbook) As Boolean
 
     ブックOPEN後処理 = True
 
@@ -67,7 +73,7 @@ End Function
 ' 機能　：検出されたファイルの1シートごとに行いたい処理を実装する
 ' *********************************************************************************************************************
 '
-Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet, ByRef results() As Variant)
+Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet)
 
     ' -----------------------------------------------------------------------------------------------------------------
     ' 処理
@@ -102,7 +108,7 @@ Function シート毎処理(txtファイルパス As Variant, ws対象シート As Worksheet, ByR
 
         Do
             ' 結果を格納する
-            Call f_結果記録(results, rng検索結果, Array(txt検索ワード, "セル", rng検索結果.Value))
+            Call obj結果出力シート.結果記録(rng検索結果, Array(txt検索ワード, "セル", rng検索結果.Value))
             
             Set rng検索結果 = ws対象シート.UsedRange.FindNext(After:=rng検索結果)
             
@@ -125,7 +131,7 @@ GotoCellSearchEnd:
                 If Not IsEmpty(varオートシェイプの文字列) And InStr(varオートシェイプの文字列, txt検索ワード) Then
                 
                     ' 結果を格納する
-                    Call f_結果記録(results, ws対象シート.Range(varオートシェイプリスト(i, 7)), _
+                    Call obj結果出力シート.結果記録(ws対象シート.Range(varオートシェイプリスト(i, 7)), _
                         Array(txt検索ワード, "オートシェイプ", varオートシェイプの文字列))
                 End If
             Next i
@@ -141,7 +147,7 @@ End Function
 ' 機能　：検出されたファイルのブックごとに行いたい後処理を実装する
 ' *********************************************************************************************************************
 '
-Function ブックCLOSE前処理(txtファイルパス As Variant, wb対象ブック As Workbook, ByRef results() As Variant) As Long
+Function ブックCLOSE前処理(txtファイルパス As Variant, wb対象ブック As Workbook) As Long
 
 
 End Function
@@ -165,7 +171,7 @@ Sub 実行結果書式編集処理(ByRef ws対象シート As Worksheet)
     
     With ws対象シート
 
-        For i = lng雛形開始行 To lng最終行
+        For i = obj結果出力シート.雛形開始行 To lng最終行
 
             ' 赤文字
             Call 検索該当文字の赤太文字化(.Range(Cells(i, 7), Cells(i, 7)), Cells(i, 5))
