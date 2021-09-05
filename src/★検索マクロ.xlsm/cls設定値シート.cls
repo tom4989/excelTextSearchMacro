@@ -115,11 +115,15 @@ Public Sub ロード(Optional txt設定値シート As String = cnstシート名)
                         ' 既に登録済の場合は、文字列のリストに設定値を追加する
                         If objDic.Exists(varシートの値全体(i, j)) Then
                             
-                            var設定値 = objDic.Item(varシートの値全体(i, j))
-                            ReDim Preserve var設定値(UBound(var設定値) + 1)
-                            var設定値(UBound(var設定値)) = エスケープ(varシートの値全体(i, j), varシートの値全体(i, j + 1))
+                            If varシートの値全体(i, j + 1) <> "---" Then
+                            
+                                var設定値 = objDic.Item(varシートの値全体(i, j))
+                                ReDim Preserve var設定値(UBound(var設定値) + 1)
+                                var設定値(UBound(var設定値)) = エスケープ(varシートの値全体(i, j), varシートの値全体(i, j + 1))
                     
-                            objDic.Item(varシートの値全体(i, j)) = var設定値
+                                objDic.Item(varシートの値全体(i, j)) = var設定値
+                    
+                            End If
                     
                         ' 次の行を確認し、同一階層の場合、設定値を文字列でなく文字列のリストにする
                         ElseIf 階層一致確認(varシートの値全体, i, j) Then

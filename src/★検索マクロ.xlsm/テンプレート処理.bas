@@ -80,11 +80,11 @@ Sub マクロ開始(Optional argサイレントモード As Boolean = False)
             
             If txtパス共通部 = "" Then
             
-                txtパス共通部 = txtパス
+                txtパス共通部 = funフォルダ名取得(CStr(txtパス))
             
             Else
             
-                txtパス共通部 = f_共通部取得(CStr(txtパス), txtパス共通部)
+                txtパス共通部 = f_共通部取得(funフォルダ名取得(CStr(txtパス)), txtパス共通部)
             
             End If
             

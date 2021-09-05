@@ -174,8 +174,8 @@ Public Function 結果ブック作成(txtパス共通部 As String)
 
                     ' ハイパーリンク設定
                     Dim strHyperLink As String
-                    strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]""&" & _
-                        "C" & i & "&""!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
+                    strHyperLink = "=HYPERLINK(""[""&A" & i & "&""\""&B" & i & "&""]'""&" & _
+                        "C" & i & "&""'!" & .Cells(i, 4) & """,""" & .Cells(i, 4) & """)"
             
                     .Range(.Cells(i, 4), .Cells(i, 4)).Value = strHyperLink
                 Next

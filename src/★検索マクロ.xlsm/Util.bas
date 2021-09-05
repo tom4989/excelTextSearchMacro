@@ -35,6 +35,10 @@ End Function
 ' #
 ' #####################################################################################################################
 
+' *********************************************************************************************************************
+' * 機能　：開始メッセージを取得する
+' *********************************************************************************************************************
+'
 Function get開始メッセージ(ByVal txt処理名 As String) As String
 
     Call init開始時刻
@@ -47,6 +51,10 @@ Function get開始メッセージ(ByVal txt処理名 As String) As String
 
 End Function
 
+' *********************************************************************************************************************
+' * 機能　：終了メッセージを取得する
+' *********************************************************************************************************************
+'
 Function get終了メッセージ(ByVal txt処理名 As String) As String
 
     Dim txtメッセージ As String
@@ -57,6 +65,10 @@ Function get終了メッセージ(ByVal txt処理名 As String) As String
 
 End Function
 
+' *********************************************************************************************************************
+' * 機能　：エラー時のメッセージを取得する
+' *********************************************************************************************************************
+'
 Function get異常時メッセージ(ByVal txt処理名 As String) As String
 
     Dim txtメッセージ As String
@@ -65,6 +77,39 @@ Function get異常時メッセージ(ByVal txt処理名 As String) As String
     Debug.Print txtメッセージ
     get異常時メッセージ = txtメッセージ
 End Function
+
+' *********************************************************************************************************************
+' * 機能　：エラーオブジェクトの内容をメッセージダイアログ、ログに出力する。
+' *********************************************************************************************************************
+'
+Sub subエラー表示(Optional argサイレントモード As Boolean = False)
+
+    Dim txtエラー内容 As clsStringBuilder
+    Set txtエラー内容 = New clsStringBuilder
+    
+    txtエラー内容.append ("Description: ")
+    txtエラー内容.appendLine (err.Description)
+    
+    txtエラー内容.append ("HelpContext: ")
+    txtエラー内容.appendLine (err.HelpContext)
+    
+    txtエラー内容.append ("HelpFile: ")
+    txtエラー内容.appendLine (err.HelpFile)
+    
+    txtエラー内容.append ("LastDllError: ")
+    txtエラー内容.appendLine (err.LastDllError)
+    
+    txtエラー内容.append ("Number: ")
+    txtエラー内容.appendLine (err.Number)
+
+    If Not argサイレントモード Then
+        MsgBox txtエラー内容.toString, vbCritical
+    End If
+    
+    subエラーログファイル出力 (txtエラー内容.toString)
+        
+End Sub
+
 
 ' #####################################################################################################################
 ' #
@@ -227,6 +272,52 @@ Function シート内容取得(wsワークシート As Worksheet) As Variant
             .Cells(1, 1), _
             .Cells(最終行取得(wsワークシート), 最終列取得(wsワークシート)))
     End With
+
+End Function
+
+
+' *********************************************************************************************************************
+' * 機能　：シートのコピー
+' *********************************************************************************************************************
+'
+Sub f_シートコピー(wb対象ブック As Workbook, txtコピー元シート名 As String, txtコピー先シート名 As String)
+
+    If f_シート存在チェック(wb対象ブック, txtコピー先シート名) Then
+    
+        Dim flgDisplayAlerts As Boolean
+        flgDisplayAlerts = Application.DisplayAlerts
+    
+        Application.DisplayAlerts = False
+        wb対象ブック.Sheets(txtコピー先シート名).Delete
+        Application.DisplayAlerts = flgDisplayAlerts
+
+    End If
+
+    wb対象ブック.Sheets(txtコピー元シート名).Copy Before:=wb対象ブック.Sheets(txtコピー元シート名)
+    ActiveSheet.Name = txtコピー先シート名
+    
+End Sub
+
+' *********************************************************************************************************************
+' * 機能　：シート存在チェック
+' *********************************************************************************************************************
+'
+Function f_シート存在チェック(wb対象ブック As Workbook, txtシート名 As String) As Boolean
+
+    Dim wsワークシート As Worksheet
+    
+    For Each wsワークシート In wb対象ブック.Sheets
+    
+        If wsワークシート.Name = txtシート名 Then
+        
+            f_シート存在チェック = True
+            Exit Function
+            
+        End If
+    
+    Next wsワークシート
+
+    f_シート存在チェック = False
 
 End Function
 
@@ -394,7 +485,7 @@ On Error GoTo ERROR_
     Exit Function
     
 ERROR_:
-    If Err.Number = 9 Then
+    If err.Number = 9 Then
         IsArrayEx = 0
     End If
 End Function
@@ -616,59 +707,6 @@ Function タイトル名指定でリスト値を取得(titleName As String, targetSheet As Work
 End Function
 
 ' *********************************************************************************************************************
-' 機能　：タイトル名指定でリスト値のRange情報を取得
-'         ※リスト値がなかった場合、リスト値エリアの1行目（値は空）のRange情報が返却されます。
-' *********************************************************************************************************************
-'
-Function タイトル名指定でリスト値のRange情報を取得(titleName As String, targetSheet As Worksheet) As Range
-
-    ' 検索ヒット数
-    Dim matchCount As Long
-    Dim checkValue As String
-    
-    ' シート内にタイトル名が複数設定されていない事を確認する。
-    matchCount = WorksheetFunction.CountIf(targetSheet.UsedRange, titleName)
-    If 1 <> matchCount Then
-        MsgBox "タイトル「" & titleName & "」が複数見つかったため、処理を中断しました。"
-        End
-    End If
-    
-    ' タイトル名のRange情報を取得
-    Dim FoundCell As Range
-    Set FoundCell = targetSheet.UsedRange.Find(what:=titleName, LookIn:=xlValues, _
-        LookAt:=xlPart, MatchCase:=False, MatchByte:=False)
-    Dim i, MaxRow, MaxCol As Long
-    
-    ' タイトルに対するリスト値を取得（空白行込み）
-    With targetSheet
-        With .Range(.Cells(FoundCell.Row, FoundCell.Column), .Cells(Rows.Count, FoundCell.Column))
-            MaxRow = .Find("*", , xlFormulas, , xlByRows, xlPrevious).Row
-            MaxCol = .Find("*", , xlFormulas, , xlByColumns, xlPrevious).Column
-        End With
-    
-        ' MaxRowを、空白行より一行↑のリスト値の行数に設定する。
-        For i = 1 To (MaxRow - FoundCell.Row)
-            checkValue = .Cells(FoundCell.Row + i, MaxCol).Value
-            If "" = checkValue Or InStr(1, checkValue, TITLE_NAME_PREFIX) > 0 Then
-                If 1 = i Then
-                    Call 処理続行判断("タイトル名「" + titleName + "」に対するリスト値が設定されていません。")
-                    MaxRow = FoundCell.Row + 1
-                Else
-                    MaxRow = FoundCell.Row + i - 1
-                End If
-                    Exit For
-            End If
-        Next
-        
-        ' リスト値を返却
-        Set タイトル名指定でリスト値のRange情報を取得 = _
-            targetSheet.Range(.Cells((FoundCell.Row + 1), FoundCell.Column), .Cells(MaxRow, MaxCol))
-        
-    End With
-
-End Function
-
-' *********************************************************************************************************************
 ' 機能　：引数で指定された行が選択状態であるか判定する
 ' *********************************************************************************************************************
 '
@@ -718,7 +756,7 @@ Function CAlpxAlp2Num(txtAlpxAlp As String) As Variant
     If UBound(var結果) >= 1 Then
         var結果(1) = CAlp2Num(CStr(var結果(1)))
     Else
-        Call 一次配列に値を追加(var結果, var結果(0))
+        Call 一次元配列に値を追加(var結果, var結果(0))
     End If
 
     CAlpxAlp2Num = var結果
@@ -814,4 +852,30 @@ Function f_RTRIM(txt対象文字列 As String, txt指定文字 As String) As String
     
     f_RTRIM = txt対象文字列
     
+End Function
+
+' #####################################################################################################################
+' #
+' # Dictionary系ユーティリティ
+' #
+' #####################################################################################################################
+
+' *********************************************************************************************************************
+' 機能：Dictionary文字列の結合
+' *********************************************************************************************************************
+'
+Function f_Dictonary結合(ByRef dic接続情報 As Object) As String
+
+    Dim txt接続文字列
+    
+    Dim var設定値 As Variant
+    
+    For Each var設定値 In dic接続情報
+    
+        txt接続文字列 = txt接続文字列 & var設定値 & "=" & dic接続情報.Item(var設定値) & ";"
+        
+    Next var設定値
+
+    f_Dictonary結合 = txt接続文字列
+
 End Function

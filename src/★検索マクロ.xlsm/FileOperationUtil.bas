@@ -5,25 +5,6 @@ Option Explicit
 ' 定数
 ' ---------------------------------------------------------------------------------------------------------------------
 
-'パスのデリミタ
-Public Const PATH_DELIMITER = "\"
-
-' ファイル名、拡張子のデリミタ
-Public Const FILE_DELIMITER = "."
-
-' ファイル操作情報
-Public Type ファイル操作情報
-    フルパス_ファイル名 As String
-    フルパス As String
-    親ディレクトリまでのフルパス As String
-    対象ディレクトリ名 As String
-    対象ファイル名 As String
-    対象ファイル情報() As String
-End Type
-
-' 対象の拡張子（モジュール）
-Public Const FILE_EXTENSION_OF_MODULE = "bas,cls,frm"
-
 ' ファイルCLOSE状態区分
 Public Enum ファイルCLOSE方法区分
     保存しないで閉じる = 0
@@ -39,31 +20,6 @@ End Enum
 
 Private objFSO As Object
 
-' ルートパス作成済フラグ
-Private rootPathMaked As Boolean
-
-' #####################################################################################################################
-' #
-' # アクセサ
-' #
-' #####################################################################################################################
-
-' *********************************************************************************************************************
-' * 機能　：ルートパス作成済みフラグを設定する
-' *********************************************************************************************************************
-'
-Public Function getRootPathMaked() As Boolean
-    getRootPathMaked = rootPathMaked
-End Function
-
-' *********************************************************************************************************************
-' * 機能　：ルートパス作成済みフラグを取得する
-' *********************************************************************************************************************
-'
-Public Function setRootPathMaked(isMaked As Boolean)
-    rootPathMaked = isMaked
-End Function
-
 ' #####################################################################################################################
 ' #
 ' # ファイル操作ユーティリティ
@@ -71,16 +27,45 @@ End Function
 ' #####################################################################################################################
 
 ' *********************************************************************************************************************
-' * 機能　：ファイル名取得
+' * 機能　：FileSystemObjectの初期化
 ' *********************************************************************************************************************
 '
-Function ファイル名取得(txtパス As String) As String
+Private Sub subFSO初期化()
 
     If objFSO Is Nothing Then
         Set objFSO = CreateObject("Scripting.FileSystemObject")
     End If
 
+End Sub
+
+' *********************************************************************************************************************
+' * 機能　：ファイル名取得
+' *********************************************************************************************************************
+'
+Function ファイル名取得(txtパス As String) As String
+
+    Call subFSO初期化
     objFSO.GetFileName (txtパス)
+
+End Function
+
+
+' *********************************************************************************************************************
+' * 機能　：フォルダ名取得
+' *********************************************************************************************************************
+'
+Function funフォルダ名取得(txtパス As String) As String
+
+    Call subFSO初期化
+    
+    If objFSO.FolderExists(txtパス) Then
+    
+        funフォルダ名取得 = txtパス
+        Exit Function
+    
+    End If
+    
+    funフォルダ名取得 = objFSO.getParentFolderName(txtパス)
 
 End Function
 
@@ -113,9 +98,7 @@ End Function
 '
 Function isDirectoryExist(directoryPath As String) As Long
 
-    If objFSO Is Nothing Then
-        Set objFSO = CreateObject("Scripting.FileSystemObject")
-    End If
+    Call subFSO初期化
     
     If True = objFSO.FileExists(directoryPath) Then
         isDirectoryExist = 2
@@ -136,6 +119,29 @@ Function mkdirIFNotExist(txtフォルダ名 As String)
     If Dir(txtフォルダ名, vbDirectory) = "" Then
         mkdir txtフォルダ名
     End If
+
+End Function
+
+' *********************************************************************************************************************
+' * 機能　：エラーログの出力を行う
+' *********************************************************************************************************************
+'
+Function subエラーログファイル出力(txtエラー内容 As String)
+
+    Call subFSO初期化
+
+    Dim txtエラーログファイルパス As String
+    txtエラーログファイルパス = ThisWorkbook.Path & "\log"
+
+    mkdirIFNotExist (txtエラーログファイルパス)
+    txtエラーログファイルパス = txtエラーログファイルパス & "\" & ThisWorkbook.Name & ".log"
+    
+    With objFSO.OpenTextFile(txtエラーログファイルパス, 8, True, -2)
+
+        .WriteLine Now & vbCrLf & txtエラー内容
+        .Close
+
+    End With
 
 End Function
 
@@ -241,8 +247,10 @@ End Function
 ' *********************************************************************************************************************
 '
 Function getDirNames(directoryPath As String) As String()
+
+    Call subFSO初期化
+
     Dim buf As String
-    
     Dim dirNames() As String
     
     ' ディレクトリ移動
@@ -251,7 +259,7 @@ Function getDirNames(directoryPath As String) As String()
     buf = Dir(directoryPath & "\" & "*.*", vbDirectory)
     Do While buf <> ""
         ' ディレクトリ名取得
-        If GetAttr(directoryPath & "\" & buf) And vbDirectory Then
+        If objFSO.FolderExists(directoryPath & "\" & buf) And vbDirectory Then
             If buf <> "." And buf <> ".." Then
             
                 ' ディレクトリ名を追加格納。
@@ -266,42 +274,3 @@ Function getDirNames(directoryPath As String) As String()
     getDirNames = dirNames
 
 End Function
-
-
-' *********************************************************************************************************************
-' * 機能　：対象ディレクトリを作成する（対象パスが未存在、作成ディレクトリ名が存在した場合は処理中断）
-' *********************************************************************************************************************
-'
-Function ディレクトリ作成(ByVal ルートパス As String, ByVal 処理日時 As String, ByVal 相対パス As String)
-
-    Dim dirCheck As Long
-    
-    ' ルートパスの存在チェック
-    dirCheck = isDirectoryExist(CStr(ルートパス & 処理日時))
-    ' 対象パスが未設定の場合（ルートパス作成時）
-    If "" = 相対パス Then
-        ' 処理日時が設定済の場合、ルートパスが作成済であれば処理中断とする
-        If "" <> 処理日時 Then
-            If 0 < dirCheck And False = getRootPathMaked() Then
-                MsgBox "以下のディレクトリは既に存在するため処理を中断します。" + Chr(10) + "「" + ルートパス & 処理日時 + "」"
-                End
-            End If
-        End If
-    End If
-
-    ' ディレクトリ作成
-    dirCheck = isDirectoryExist(CStr(ルートパス & 処理日時 & PATH_DELIMITER & 相対パス))
-    If 0 > dirCheck Then
-        mkdir ルートパス & 処理日時 & PATH_DELIMITER & 相対パス
-        Call setRootPathMaked(True)
-    End If
-    
-End Function
-
-
-
-
-
-
-
-
